@@ -3,141 +3,73 @@
 // Author: dunamismax
 // Date: 06-15-2025
 //
-// This file is a multi-file project. It creates a simple REST API
-// for a contact book, combining our knowledge of net/http, JSON,
-// structs, and maps.
+// This file is the entry point for our multi-file REST API project.
+// It initializes dependencies and starts the web server.
 
 /*
 =====================================================================================
 |                                   - LESSON START -                                  |
 =====================================================================================
 
-PROJECT BRIEF: SIMPLE REST API
+PROJECT BRIEF: A COMPLETE REST API
 
-In this project, we will build a simple but functional REST API (Representational
-State Transfer API). A REST API is an architectural style for web services that
-uses standard HTTP methods (like GET, POST, PUT, DELETE) to allow clients to
-interact with resources.
+In this enhanced project, we will build a complete and well-structured REST API.
+This version improves upon our initial concept by:
+ 1. SEPARATING CONCERNS: We split our code into multiple files (`main.go`,
+    `handlers.go`, `store.go`, `router.go`) to make it organized and maintainable.
+ 2. FULL CRUD: We implement all standard CRUD (Create, Read, Update, Delete)
+    operations for our `/contacts` resource.
+ 3. CUSTOM ROUTER: We build a simple router from scratch to understand how
+    incoming requests are matched to handler functions.
+ 4. STRUCTURED JSON RESPONSES: We create helper functions to ensure all API
+    responses, including errors, are in a consistent JSON format.
 
-Our API will manage a "contact book" and will expose one resource: `/contacts`.
-We will implement two HTTP methods for this resource:
-- `GET /contacts`: To retrieve a list of all contacts.
-- `POST /contacts`: To add a new contact to the list.
-
-To do this, we'll store our data in memory using a map, and we will introduce
-a `sync.Mutex` to make our data access safe for concurrent requests.
+This structure is much closer to what you would see in a professional Go application.
+The `main.go` file now has a single responsibility: starting the application.
 */
-
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"sync" // The sync package provides synchronization primitives, like mutexes.
 )
 
-// --- Part 1: The Data Model and Storage ---
-
-// Contact defines the structure of a single contact with JSON tags.
-type Contact struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-	Phone string `json:"phone"`
-}
-
-// We'll use an in-memory database (a map) to store our contacts.
-// The key will be the contact's ID.
-var contactStore = make(map[int]Contact)
-
-// This variable will act as a simple auto-incrementing primary key.
-var nextContactID = 1
-
-// A Mutex is a MUTUAL EXCLUSION lock. We need it because multiple requests
-// (goroutines) could try to access `contactStore` at the same time, leading to
-// a RACE CONDITION. The mutex ensures that only one goroutine can access the
-// map at any given time.
-var storeMutex = &sync.Mutex{}
-
-// --- Part 2: The API Handler ---
-
-// contactsHandler will handle all requests to the `/contacts` endpoint.
-func contactsHandler(w http.ResponseWriter, r *http.Request) {
-	// We use a `switch` statement on the request's HTTP method.
-	switch r.Method {
-	case http.MethodGet:
-		handleGetContacts(w, r)
-	case http.MethodPost:
-		handlePostContact(w, r)
-	default:
-		// If any other method is used, we send a "Method Not Allowed" response.
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-// handleGetContacts processes GET requests to retrieve all contacts.
-func handleGetContacts(w http.ResponseWriter, r *http.Request) {
-	// Lock the mutex to ensure safe reading of the map. `defer` ensures
-	// Unlock() is called right before the function returns.
-	storeMutex.Lock()
-	defer storeMutex.Unlock()
-
-	// A JSON array is more common for lists than a JSON object.
-	// We'll convert our map of contacts into a slice for marshaling.
-	contacts := make([]Contact, 0, len(contactStore))
-	for _, contact := range contactStore {
-		contacts = append(contacts, contact)
-	}
-
-	// Set the Content-Type header so the client knows to expect JSON.
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(contacts) // Encode the slice directly to the ResponseWriter.
-}
-
-// handlePostContact processes POST requests to create a new contact.
-func handlePostContact(w http.ResponseWriter, r *http.Request) {
-	var newContact Contact
-	// Use json.NewDecoder to read the request body and decode the JSON into our struct.
-	// This is more efficient than reading the whole body into memory first.
-	err := json.NewDecoder(r.Body).Decode(&newContact)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// Lock the mutex for safe writing.
-	storeMutex.Lock()
-	defer storeMutex.Unlock()
-
-	// Assign a new ID and store the contact.
-	newContact.ID = nextContactID
-	contactStore[newContact.ID] = newContact
-	nextContactID++
-
-	// Respond to the client with the newly created contact (including its new ID).
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated) // Set the status code to 201 Created.
-	json.NewEncoder(w).Encode(newContact)
-}
-
 func main() {
-	// --- Part 3: Initializing Data and Starting the Server ---
+	// --- Part 1: Initialization ---
 
-	// Pre-populate our store with some initial data.
-	contactStore[1] = Contact{ID: 1, Name: "Alice", Email: "alice@example.com", Phone: "111-111-1111"}
-	contactStore[2] = Contact{ID: 2, Name: "Bob", Email: "bob@example.com", Phone: "222-222-2222"}
-	nextContactID = 3
+	// Create an instance of our contact store. This encapsulates all our
+	// data and the mutex for safe concurrent access.
+	store := NewContactStore()
 
-	// Register our handler for the `/contacts` route.
-	http.HandleFunc("/contacts", contactsHandler)
+	// Pre-populate our store with some initial data for demonstration.
+	store.Create(Contact{Name: "Alice", Email: "alice@example.com", Phone: "111-111-1111"})
+	store.Create(Contact{Name: "Bob", Email: "bob@example.com", Phone: "222-222-2222"})
 
-	fmt.Println("Server starting on port :8080...")
+	// Create a new instance of our custom router.
+	router := NewRouter()
+
+	// --- Part 2: Registering API Routes ---
+
+	// We register our handlers for the various endpoints and HTTP methods.
+	// This clear, declarative style makes it easy to see all available API routes.
+	router.HandleFunc(http.MethodGet, "/contacts", store.handleGetContacts)
+	router.HandleFunc(http.MethodPost, "/contacts", store.handleCreateContact)
+
+	// For routes with an ID, our custom router knows how to handle them.
+	router.HandleFunc(http.MethodGet, "/contacts/:id", store.handleGetContactByID)
+	router.HandleFunc(http.MethodPut, "/contacts/:id", store.handleUpdateContact)
+	router.HandleFunc(http.MethodDelete, "/contacts/:id", store.handleDeleteContact)
+
+	// --- Part 3: Starting the Server ---
+
+	port := ":8080"
+	fmt.Printf("Server starting on port %s...\n", port)
 	fmt.Println("See README.md for instructions on how to use the API.")
 
-	// Start the server.
-	err := http.ListenAndServe(":8080", nil)
+	// We pass our custom router as the handler for the server. The router's
+	// ServeHTTP method will now be responsible for directing all incoming traffic.
+	err := http.ListenAndServe(port, router)
 	if err != nil {
 		log.Fatalf("Could not start server: %s\n", err)
 	}
@@ -150,7 +82,9 @@ func main() {
 
 HOW TO RUN THIS CODE:
 
-This is a multi-file project. Please see the `README.md` file in this directory
-for detailed instructions on how to run the server and interact with it using
-tools like `curl`.
+1.  Open a terminal and navigate to this project's directory.
+2.  Run the server using the `go run .` command, which compiles and runs all
+    .go files in the directory.
+    `go run .`
+3.  Follow the instructions in `README.md` to interact with the API using `curl`.
 */

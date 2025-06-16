@@ -1,118 +1,81 @@
-# Lesson 24: Final Capstone - URL Shortener Service
+# Capstone Project: URL Shortener Microservice
 
-Congratulations on reaching the final project! This capstone is where we bring everything you've learned together to build a complete, real-world microservice: a URL Shortener.
+This is it—the final capstone project for **Go From The Ground Up**! This project is the culmination of everything you've learned. We will build a complete, production-ready URL shortener microservice from scratch, using only Go's standard library.
 
-This service will take a long URL and return a short, unique code. When a user navigates to the short URL, they will be redirected to the original long URL. This project demonstrates the power and simplicity of Go for building high-performance network services.
+This isn't just a simple script; it's a well-architected application that demonstrates professional Go development practices you can apply directly to your own projects.
 
----
+## ✨ Key Concepts Applied
 
-## ✨ Concepts You Will Master
+This project synthesizes core concepts from the entire course into a single, cohesive application:
 
-*   **Professional Project Structure:** Using the `cmd/` and `internal/` layout for clean separation of concerns.
-*   **Web Services with `net/http`:** Building a robust HTTP server to handle API requests.
-*   **RESTful API Design:** Creating endpoints for creating (`POST`) and retrieving (`GET`) resources.
-*   **JSON Data Handling:** Encoding and decoding JSON for API communication.
-*   **Concurrency-Safe State:** Using a `sync.Mutex` to safely handle in-memory data storage across multiple requests.
-*   **Go Modules:** Organizing your code into reusable internal packages.
-*   **Building and Running an Application:** The complete workflow from `go mod init` to a running executable.
+- ✅ **Professional Project Structure**: We use the standard `cmd/` and `internal/` directory layout to organize a scalable and maintainable application.
+- ✅ **Go Modules**: The project is structured as a proper Go module, with import paths based on the repository URL, enabling the Go toolchain to manage dependencies and builds correctly.
+- ✅ **Clean API Design**: A simple, intuitive JSON API for creating short links (`POST /api/shorten`) and a clean redirect mechanism (`GET /{shortCode}`).
+- ✅ **Dependency Injection**: We create our dependencies (like the logger and data store) in `main` and pass them into our handlers, making our code decoupled and easy to test.
+- ✅ **Concurrency Safety**: Our in-memory store uses a `sync.RWMutex` to handle many concurrent reads (redirects) and writes (creations) safely, preventing race conditions.
+- ✅ **Structured Logging**: We set up a simple but effective logger to provide insight into the server's operations.
+- ✅ **Standard Library Power**: We build the entire web server, router, and logic using only Go's powerful standard library packages like `net/http`, `encoding/json`, `log`, and `sync`.
 
----
+## 📁 Go Modules & Project Structure
 
-## 🏗️ Project Architecture
+A critical part of this lesson is understanding how professional Go projects are organized. Our project is defined as a Go module in the `go.mod` file at the repository's root. This allows Go's tooling to correctly resolve the `import` paths for our internal packages.
 
-We will use the professional project layout taught in the previous lesson. This separates our code based on its purpose, making it clean and maintainable.
+The project uses a standard layout to separate concerns:
+content_copy
+download
 Use code with caution.
 Markdown
-/24_capstone_url_shortener_service/
-├── /cmd/
-│ └── /urlshortener/
-│ └── main.go <-- The application's entry point. Initializes and starts everything.
-├── /internal/
-│ ├── /handler/ <-- Contains the HTTP handlers that process requests.
-│ │ └── routes.go
-│ └── /store/ <-- Manages the in-memory data storage safely.
-│ └── store.go
-└── README.md <-- This lesson and instruction file.
+.
+├── go.mod <-- Defines the module path for the whole repository
+└── Part5_The_Go_Ecosystem
+└── 24_capstone_url_shortener_service/
+├── cmd/
+│ └── urlshortener/
+│ └── main.go # Entry point: configuration and wiring
+├── internal/
+│ ├── handler/
+│ │ └── handler.go # API Layer: HTTP request/response logic
+│ ├── shortener/
+│ │ └── shortener.go # Business Logic: Generating short codes
+│ └── store/
+│ └── store.go # Data Layer: Storing and retrieving data
+└── README.md
 
-*   `store.go`: Will define a `URLStore` struct responsible for saving and retrieving URLs. It will use a map and a mutex to be thread-safe.
-*   `routes.go`: Will define the functions that handle the HTTP logic, such as parsing JSON from a request and redirecting users.
-*   `main.go`: Will be the "glue". It will create the store, set up the HTTP routes with their handlers, and start the web server.
+## 🚀 How to Run the Service
+
+**Prerequisites**: You must have Go installed and have cloned the `Go-from-the-Ground-Up` repository. A `go.mod` file must exist at the root of the repository.
+
+1.  **Navigate to the Command Directory**:
+    In Go, we run applications from their `main` package, which is typically located in a `cmd/` directory. Open your terminal and `cd` into this project's `cmd` directory.
+
+    ```sh
+    # This path must match your local file system structure.
+    cd Part5_The_Go_Ecosystem/24_capstone_url_shortener_service/cmd/urlshortener/
+    ```
+
+2.  **Run the Server**:
+    Use the `go run .` command. This tells Go to compile and run the `main` package in the current directory. It will automatically find the project's other internal packages using the module information from `go.mod`.
+
+    ```sh
+    go run .
+    ```
+
+    You should see the server's startup log message:
+    `[INFO] Server starting on http://localhost:8080`
+
+## ⚙️ API Reference
+
+You can interact with the running API using a tool like `curl` or an API client like Postman.
+
+| Endpoint       | Method | Description                                                                      | Example `curl` Command                                                                                                                  |
+| :------------- | :----- | :------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/shorten` | `POST` | Takes a long URL and returns its shortened version. This endpoint is idempotent. | `curl -i -X POST -H "Content-Type: application/json" -d '{"url": "https://go.dev/doc/effective_go"}' http://localhost:8080/api/shorten` |
+| `/{shortCode}` | `GET`  | Redirects the browser to the original long URL associated with the short code.   | `curl -i -L http://localhost:8080/{shortCode}` (Replace `{shortCode}` with one you created)                                             |
+| `/`            | `GET`  | Displays a simple welcome message for users who visit the root URL.              | `curl http://localhost:8080`                                                                                                            |
 
 ---
 
-## 🚀 How to Build and Run the Service
-
-Follow these steps precisely from within the `24_capstone_url_shortener_service/` directory.
-
-1.  **Create the Directory Structure:**
-    If you haven't already, create the necessary folders.
-    ```sh
-    # Create nested directories in one command
-    mkdir -p cmd/urlshortener internal/handler internal/store
-    ```
-
-2.  **Copy the Code:**
-    Place the code from the blocks below into their corresponding files.
-
-3.  **Initialize the Go Module:**
-    In your terminal, navigate to the root of this project (`24_capstone_url_shortener_service/`) and initialize the Go module. Let's call our module `urlshortener`.
-
-    ```sh
-    # Make sure you are in the '24_capstone_url_shortener_service' directory
-    go mod init urlshortener
-    ```
-    This creates the `go.mod` file, which allows our `main` package to import the `internal` packages correctly.
-
-4.  **Build the Application:**
-    From the same root directory, build the executable.
-
-    ```sh
-    go build -o urlshortener-service ./cmd/urlshortener
-    ```
-    The `-o urlshortener-service` flag tells the compiler to name the output executable `urlshortener-service`.
-
-5.  **Run the Service:**
-    Execute the file you just built.
-
-    ```sh
-    ./urlshortener-service
-    ```
-    The server is now running on `http://localhost:8080`.
-
----
-
-##  interagindo com a API
-
-You will need a tool like `curl` to interact with the API. Open a new terminal window while the server is running.
-
-### 1. Shorten a URL (POST)
-
-Send a POST request with a JSON body containing the URL you want to shorten.
-
-```sh
-curl -X POST -H "Content-Type: application/json" -d '{"url":"https://www.google.com/search?q=golang"}' http://localhost:8080/shorten
+Congratulations on completing the capstone! You've built a robust, real-world application and are now well-equipped to build your own high-performance services in Go.
+content_copy
+download
 Use code with caution.
-Expected Response:
-The server will respond with a JSON object containing the short code.
-
-{"short_code":"XXXXXX"}
-Use code with caution.
-Json
-(The XXXXXX will be a random 6-character string).
-
-2. Use the Shortened URL (GET)
-Now, use curl with the -v flag to see the redirect in action. Replace XXXXXX with the code you received.
-
-curl -v http://localhost:8080/XXXXXX
-Use code with caution.
-Sh
-Expected Response:
-You will see a 302 Found status code and a Location header pointing to the original URL. A web browser would automatically redirect to this location.
-
-*   Trying 127.0.0.1:8080...
-> GET /XXXXXX HTTP/1.1
->
-< HTTP/1.1 302 Found
-< Location: https://www.google.com/search?q=golang
-< Date: ...
-< Content-Length: 0

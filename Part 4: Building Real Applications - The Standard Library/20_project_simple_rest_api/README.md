@@ -1,66 +1,54 @@
-# Project: Simple REST API
+# Project: A Structured REST API in Go
 
-This project is a multi-file REST API for a "contact book" that handles GET and POST requests, serving data in JSON format. It is built using only Go's standard library.
+Welcome to the capstone project for Part 4 of "Go From The Ground Up"! This project demonstrates how to build a simple but complete REST API for a "contact book" using only Go's standard library. It moves beyond a single-file script to showcase a structured, multi-file layout that separates concerns—a critical practice for building maintainable, real-world applications.
 
-## Concepts Demonstrated
-*   **`net/http`**: Setting up a web server and routing requests.
-*   **`encoding/json`**: Marshaling Go structs into JSON for responses and unmarshaling JSON from requests into Go structs.
-*   **Project Structure**: Separating project files (this `README.md` and `main.go`).
-*   **RESTful Principles**: Handling different HTTP methods (`GET`, `POST`) on a single resource URL (`/contacts`).
-*   **Concurrency Safety**: Using a `sync.Mutex` to protect shared data (the in-memory map).
+You'll combine everything you've learned about `net/http`, JSON handling, structs, and concurrency to create a functional and professional-looking backend service.
 
-## File Structure
-Use code with caution.
-Markdown
-20_project_simple_rest_api/
-├── main.go # The main application logic and server setup.
-└── README.md # This file - instructions and explanations.
+## ✨ What You'll Learn
 
-## How to Run This Server
+- ✅ **Full CRUD API**: Implement all four `Create`, `Read`, `Update`, and `Delete` operations.
+- 🗂️ **Professional Project Structure**: Organize code by function (handlers, storage, routing) to create a clean and scalable layout.
+- 🔒 **Concurrency Safety**: Use a `sync.Mutex` to protect shared data and prevent race conditions in a concurrent environment.
+- 🛣️ **HTTP Routing Demystified**: See how a basic HTTP router works under the hood by building one from scratch.
+- 📝 **Structured JSON Handling**: Create helper functions to send consistent and predictable JSON responses for both successes and errors.
+- ✔️ **Request Validation**: Implement simple server-side validation for incoming data.
 
-1.  **Navigate to the project directory** in your terminal:
+## 📁 Project Structure
+
+This project is intentionally split into multiple files to teach the principle of **separation of concerns**.
+
+- `main.go`: The application's entry point. Responsible for initializing the data store, setting up the router, and starting the HTTP server.
+- `store.go`: The data layer. Defines the `Contact` struct and a `ContactStore` that manages all interactions with our in-memory map (the "database").
+- `handlers.go`: The API logic layer. Contains the HTTP handler functions responsible for parsing requests, calling the store, and crafting JSON responses.
+- `router.go`: The routing layer. Defines a basic HTTP router that directs incoming requests to the correct handler based on the URL path and HTTP method.
+
+## 🚀 Running the API
+
+1.  **Navigate to the Project Directory**:
+    Open your terminal and `cd` into this project's directory.
+
     ```sh
-    # Example path, adjust if necessary
+    # Example path
     cd Part4_Building_Real_Applications/20_project_simple_rest_api/
     ```
 
-2.  **Run the application** using the `go run` command:
+2.  **Run the Server**:
+    Use the `go run .` command. This automatically finds, compiles, and runs all `.go` files in the current directory.
     ```sh
-    go run main.go
+    go run .
     ```
-    The terminal will print `Server starting on port :8080...`. The server is now running and listening for requests.
+    You should see the message: `Server starting on port :8080...` The API is now live and ready to accept requests!
 
-## How to Use the API
+## ⚙️ API Reference
 
-You will need a tool like `curl` or Postman to interact with this API. The following examples use `curl`.
+You can interact with the running API using a tool like `curl` or an API client like Postman.
 
-### 1. Get All Contacts (GET)
+_**Note**: In the examples below, `{id}` should be replaced with an actual contact ID (e.g., `1`)._
 
-Open a **new terminal window** (while the server is running in the other) and run the following command:
-
-```sh
-curl http://localhost:8080/contacts
-Use code with caution.
-Expected Response:
-You should see a JSON array containing the initial contacts stored in the server's memory.
-
-[{"id":1,"name":"Alice","email":"alice@example.com","phone":"111-111-1111"},{"id":2,"name":"Bob","email":"bob@example.com","phone":"222-222-2222"}]
-Use code with caution.
-Json
-2. Add a New Contact (POST)
-Run the following curl command to send a POST request with a JSON body. This will create a new contact.
-
-curl -X POST -H "Content-Type: application/json" -d '{"name":"Charlie","email":"charlie@example.com","phone":"333-333-3333"}' http://localhost:8080/contacts
-Use code with caution.
-Sh
-Expected Response:
-The server will respond with the contact that was just created, now including its new server-assigned id.
-
-{"id":3,"name":"Charlie","email":"charlie@example.com","phone":"333-333-3333"}
-Use code with caution.
-Json
-If you run the GET command again, you will now see Charlie in the list.
-
-curl http://localhost:8080/contacts```
-```json
-[{"id":1,"name":"Alice","email":"alice@example.com","phone":"111-111-1111"},{"id":2,"name":"Bob","email":"bob@example.com","phone":"222-222-2222"},{"id":3,"name":"Charlie","email":"charlie@example.com","phone":"333-333-3333"}]
+| Endpoint         | Method   | Description                                                                                       | Example `curl` Command                                                                                                                                                          |
+| :--------------- | :------- | :------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/contacts`      | `GET`    | Retrieves a JSON array of all contacts.                                                           | `curl -i http://localhost:8080/contacts`                                                                                                                                        |
+| `/contacts`      | `POST`   | Creates a new contact. The request body must be a valid `Contact` JSON object.                    | `curl -i -X POST -H "Content-Type: application/json" -d '{"name": "Charlie", "email": "charlie@example.com", "phone": "333-333-3333"}' http://localhost:8080/contacts`          |
+| `/contacts/{id}` | `GET`    | Retrieves a single contact by its unique ID.                                                      | `curl -i http://localhost:8080/contacts/1`                                                                                                                                      |
+| `/contacts/{id}` | `PUT`    | Updates an existing contact's details. The request body must be a complete `Contact` JSON object. | `curl -i -X PUT -H "Content-Type: application/json" -d '{"name": "Alice Smith", "email": "alice.smith@example.com", "phone": "111-555-4444"}' http://localhost:8080/contacts/1` |
+| `/contacts/{id}` | `DELETE` | Deletes a contact by its unique ID. Returns a `204 No Content` status on success.                 | `curl -i -X DELETE http://localhost:8080/contacts/2`                                                                                                                            |
